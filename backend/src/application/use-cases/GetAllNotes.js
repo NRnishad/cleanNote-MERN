@@ -3,7 +3,7 @@ export class GetAllNotes {
     this.noteRepository = noteRepository;
   }
 
-  async execute() {
-    return await this.noteRepository.findAll();
+  async execute(userId) {
+    return await this.noteRepository.findAllByUserId(userId);
   }
 }

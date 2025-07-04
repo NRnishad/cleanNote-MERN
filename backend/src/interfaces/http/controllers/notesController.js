@@ -7,9 +7,9 @@ export class NotesController {
     this.deleteNoteUseCase = deleteNote;
   }
 
-  getAllNotes = async (_, res) => {
+  getAllNotes = async (req, res) => {
     try {
-      const notes = await this.getAllNotesUseCase.execute();
+      const notes = await this.getAllNotesUseCase.execute(req.user.id);
       res.status(200).json(notes);
     } catch (error) {
       console.error(error);
@@ -34,7 +34,7 @@ export class NotesController {
   createNote = async (req, res) => {
     try {
       const { title, content } = req.body;
-      const savedNote = await this.createNoteUseCase.execute({ title, content });
+      const savedNote = await this.createNoteUseCase.execute(req.body, req.user.id);
       res.status(201).json(savedNote);
     } catch (error) {
       console.error('Error creating note in controller', error);
@@ -46,6 +46,13 @@ export class NotesController {
     try {
       const { id } = req.params;
       const { title, content } = req.body;
+       const note = await this.getNoteByIdUseCase.execute(id);
+      if (!note) {
+        return res.status(404).json({ message: 'Note not found' });
+      }
+      if (note.user.toString() !== req.user.id) {
+        return res.status(401).json({ message: 'User not authorized' });
+      }
       const updatedNote = await this.updateNoteUseCase.execute(id, { title, content });
       if (!updatedNote) {
         return res.status(404).json({ message: 'Note not found' });
@@ -60,11 +67,22 @@ export class NotesController {
   deleteNote = async (req, res) => {
     try {
       const { id } = req.params;
-      const deletedNote = await this.deleteNoteUseCase.execute(id);
-      if (!deletedNote) {
+      const note = await this.getNoteByIdUseCase.execute(id);
+      if (!note) {
         return res.status(404).json({ message: 'Note not found' });
       }
+      if (note.user.toString() !== req.user.id) {
+        return res.status(401).json({ message: 'User not authorized' });
+      }
+      // const deletedNote = await this.deleteNoteUseCase.execute(id);
+      // if (!deletedNote) {
+      //   return res.status(404).json({ message: 'Note not found' });
+      // }
+      // res.status(200).json({ message: 'Note deleted successfully' });
+      await this.deleteNoteUseCase.execute(id);
       res.status(200).json({ message: 'Note deleted successfully' });
+
+
     } catch (error) {
       console.error('Error in delete note controller', error);
       res.status(500).json({ message: 'Internal server error' });

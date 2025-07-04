@@ -3,12 +3,21 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
+import cookieParser from 'cookie-parser';
+import { protect } from './interfaces/http/middleware/authMiddleware.js';
 
 // --- Dependency Imports ---
 // Infrastructure
 import { connectDB } from './infrastructure/config/db.js';
 import { MongoNoteRepository } from './infrastructure/database/MongoNoteRepository.js';
 import rateLimiter from './interfaces/http/middleware/rateLimiter.js';
+
+// authentication
+import { RegisterUser } from './application/use-cases/RegisterUser.js';
+import { LoginUser } from './application/use-cases/LoginUser.js';
+import { MongoUserRepository } from './infrastructure/database/MongoUserRepository.js';
+import { AuthController } from './interfaces/http/controllers/authController.js';
+import { createAuthRouter } from './interfaces/http/routes/authRoutes.js';
 
 // Application (Use Cases)
 import { CreateNote } from './application/use-cases/CreateNote.js';
@@ -24,6 +33,7 @@ import { createNotesRouter } from './interfaces/http/routes/notesRoutes.js';
 dotenv.config();
 
 const app = express();
+app.use(cookieParser());
 const __dirname = path.resolve();
 
 // --- Middleware ---
@@ -34,10 +44,20 @@ if (process.env.NODE_ENV === 'development') {
     next();
   });
 }
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(rateLimiter); // Rate limiter is an HTTP-level concern
 
 // --- Dependency Injection / Composition Root ---
+
+
+// --- Auth Dependency Injection & Routes ---
+const userRepository = new MongoUserRepository();
+const registerUserUseCase = new RegisterUser(userRepository);
+const loginUserUseCase = new LoginUser(userRepository);
+const authController = new AuthController(registerUserUseCase, loginUserUseCase);
+
+
+
 // 1. Create repository instance (Infrastructure)
 const noteRepository = new MongoNoteRepository();
 
@@ -59,9 +79,11 @@ const notesController = new NotesController(
 
 // 4. Create router, injecting the controller
 const notesRouter = createNotesRouter(notesController);
-
+const authRouter = createAuthRouter(authController);
 // --- API Routes ---
-app.use('/api/notes', notesRouter);
+app.use('/api/users', authRouter);
+app.use('/api/notes', protect, notesRouter)
+
 
 // --- Serve Frontend ---
 // if (process.env.NODE_ENV === 'production') {

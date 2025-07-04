@@ -5,9 +5,9 @@ export class CreateNote {
     this.noteRepository = noteRepository;
   }
 
-  async execute({ title, content }) {
+  async execute({ title, content }, userId) {
     // Business logic could be added here, e.g., validation
     const newNote = new Note(null, title, content); // ID is null initially
-    return await this.noteRepository.add(newNote);
+    return await this.noteRepository.add(newNote, userId);
   }
 }

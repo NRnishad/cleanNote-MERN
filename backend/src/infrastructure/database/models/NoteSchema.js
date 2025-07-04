@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const noteSchema = new mongoose.Schema({
+  // Add this user field
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User',
+  },
   title: {
     type: String,
     required: true,
@@ -12,5 +18,4 @@ const noteSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const NoteModel = mongoose.model('Note', noteSchema);
-
 export default NoteModel;
